@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Piano al grammo, scambi equivalenti e spesa. Flessibile, mai ossessivo.">
+<meta name="theme-color" content="#f5f6f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c100f" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Omni">
+<title>Omni · Mangia bene, senza ossessioni</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preload" href="fonts/PlusJakartaSans-var.woff" as="font" type="font/woff" crossorigin>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="header-left">
+    <div class="greeting" id="hdr-greeting">Ciao<small id="hdr-sub"></small></div>
+  </div>
+  <div class="brand" id="brand" aria-label="Omni">Omni<span class="dot">.</span></div>
+  <div class="header-right">
+    <button class="avatar-btn" id="hdr-avatar" data-action="go" data-tab="profilo" aria-label="Apri il profilo">OM</button>
+  </div>
+</header>
+
+<nav class="tabbar" role="tablist" aria-label="Sezioni" id="tabbar"></nav>
+
+<main id="main">
+  <section class="view" id="view-oggi" role="tabpanel" aria-label="Oggi"></section>
+  <section class="view" id="view-piano" role="tabpanel" aria-label="Piano"></section>
+  <section class="view" id="view-scambi" role="tabpanel" aria-label="Scambi"></section>
+  <section class="view" id="view-spesa" role="tabpanel" aria-label="Spesa"></section>
+  <section class="view" id="view-profilo" role="tabpanel" aria-label="Profilo"></section>
+</main>
+
+<button class="fab hidden" id="fab" data-action="open-add-menu" aria-label="Aggiungi">
+  <svg class="ic ic-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+  <span>Aggiungi</span>
+</button>
+
+<div id="wizard-root"></div>
+<div id="overlay-root"></div>
+<div class="toast-wrap" id="toast-root" aria-live="polite"></div>
+
+<noscript><p style="padding:24px">Omni ha bisogno di JavaScript per funzionare.</p></noscript>
+
+<script src="js/icons.js"></script>
+<script src="js/foods.js"></script>
+<script src="js/content.js"></script>
+<script src="js/core.js"></script>
+<script src="js/planner.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/view-oggi.js"></script>
+<script src="js/view-piano.js"></script>
+<script src="js/view-scambi.js"></script>
+<script src="js/view-spesa.js"></script>
+<script src="js/view-profilo.js"></script>
+<script src="js/wizard.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
