@@ -1,6 +1,6 @@
 /* Service worker: l'app funziona offline dopo la prima apertura.
    Ad ogni rilascio aumenta CACHE_VERSION, così gli utenti ricevono i file nuovi. */
-const CACHE_VERSION = 'omni-v2.3.0';
+const CACHE_VERSION = 'omni-v2.3.1';
 const ASSETS = [
   './',
   './index.html',
@@ -29,7 +29,13 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE_VERSION).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  /* cache: 'reload' scavalca la cache HTTP del browser: la nuova versione
+     scarica sempre i file appena pubblicati, mai copie vecchie. */
+  event.waitUntil(
+    caches.open(CACHE_VERSION)
+      .then(c => c.addAll(ASSETS.map(url => new Request(url, { cache: 'reload' }))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', event => {
@@ -45,7 +51,7 @@ self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
   if (req.mode === 'navigate') {
-    event.respondWith(fetch(req).then(res => {
+    event.respondWith(fetch(req, { cache: 'no-cache' }).then(res => {
       const copy = res.clone();
       caches.open(CACHE_VERSION).then(c => c.put('./index.html', copy));
       return res;
