@@ -43,6 +43,41 @@ function coachTip(day, iso) {
   return { icon: 'bulb', t: tip.t, d: tip.d, general: true };
 }
 
+/* ---------------- Banner "Aggiungi alla Home" ----------------
+   Compare solo su telefono, se l'app è aperta nel browser e non installata. */
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstall = e;
+  if (typeof currentTab !== 'undefined' && currentTab === 'oggi' && state.profile) renderToday();
+});
+window.addEventListener('appinstalled', () => { deferredInstall = null; state.settings.installHidden = true; saveState(); });
+const isStandalone = () => (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isMobile = () => isIOS() || /Android/i.test(navigator.userAgent);
+
+function installBannerHtml() {
+  if (state.settings.installHidden || isStandalone() || !isMobile()) return '';
+  let how;
+  if (isIOS()) how = `Apri questa pagina con <b style="display:inline">Safari</b>, tocca Condividi ${icon('share', 'ic-sm')} e poi «Aggiungi alla schermata Home».`;
+  else if (deferredInstall) how = 'Si apre a schermo intero, funziona anche offline e i tuoi dati restano più al sicuro.';
+  else how = 'Nel menu ⋮ di Chrome scegli «Installa app» o «Aggiungi a schermata Home».';
+  return `<div class="install" role="note">
+    <span class="ic-wrap">${icon('phone')}</span>
+    <div style="flex:1"><b>Installa ${esc(APP_NAME)} sul telefono</b><p>${how}</p>
+      ${deferredInstall ? `<button class="btn btn-primary btn-sm" data-action="install-app">${icon('download', 'ic-sm')} Installa</button>` : ''}</div>
+    <button class="icon-btn sm" data-action="install-hide" aria-label="Nascondi">${icon('x', 'ic-sm')}</button>
+  </div>`;
+}
+ACTIONS['install-app'] = async () => {
+  if (!deferredInstall) return;
+  deferredInstall.prompt();
+  try { await deferredInstall.userChoice; } catch (e) { /* ignora */ }
+  deferredInstall = null;
+  renderToday();
+};
+ACTIONS['install-hide'] = () => { state.settings.installHidden = true; saveState(); renderToday(); };
+
 /* ---------------- Render ---------------- */
 function renderToday() {
   const iso = Today.date;
@@ -95,8 +130,11 @@ function renderToday() {
       <div class="macro-delta ${ok ? 'ok' : ''}">${dTxt}</div></div>`;
   };
 
+  const first = (state.profile.name || '').trim().split(/\s+/)[0];
   $('#view-oggi').innerHTML = `
   <div class="today-wrap">
+    <div class="today-greet"><h1>${esc(first ? 'Ciao, ' + first : 'Ciao')}</h1><small>${esc(state.plan ? goalName(state.plan.cfg.goal) : '')} · ${fmt0(T.kcal)} kcal</small></div>
+    ${installBannerHtml()}
     <div class="datebar">
       <button class="icon-btn" data-action="week-shift" data-d="-7" aria-label="Settimana precedente">${icon('left')}</button>
       <label class="month-btn">${esc(monthLbl)} ${icon('down', 'ic-sm')}

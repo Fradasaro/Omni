@@ -110,6 +110,10 @@ function renderProfile() {
           <div class="seg" style="min-width:210px">
             ${[['system', 'Sistema'], ['light', 'Chiaro'], ['dark', 'Scuro']].map(([v, l]) => `<button type="button" data-action="set-theme" data-v="${v}" aria-pressed="${theme === v}">${l}</button>`).join('')}
           </div></div>
+        <div class="setting"><div class="setting-txt"><b>Colore</b><small>L'accento di bottoni e grafici</small></div>
+          <div class="swatches" role="group" aria-label="Colore d'accento">
+            ${ACCENTS.map(a => `<button type="button" class="swatch" style="background:${a.color}" data-action="set-accent" data-v="${a.v}" aria-pressed="${(state.settings.accent || 'menta') === a.v}" aria-label="${a.name}" title="${a.name}">${(state.settings.accent || 'menta') === a.v ? icon('check') : ''}</button>`).join('')}
+          </div></div>
         <div class="setting"><div class="setting-txt"><b>Arrotondamento grammi</b><small>Per piano e scambi</small></div>
           <div class="seg" style="min-width:170px">
             <button type="button" data-action="set-round" data-v="5" aria-pressed="${state.settings.round5}">5 g</button>
@@ -130,7 +134,8 @@ function renderProfile() {
       </div>
     </div>
   </div>
-  <p class="disclaimer">${esc(DISCLAIMER)}</p>`;
+  <p class="disclaimer">${esc(DISCLAIMER)}</p>
+  <div class="legal-links"><a href="privacy.html" target="_blank" rel="noopener">Privacy e termini d'uso</a></div>`;
 
   const pf = $('[data-pf]');
   pf.querySelector('[data-pf-sex]').addEventListener('click', e => {
@@ -227,6 +232,7 @@ ACTIONS['guidelines'] = () => openSheet({
   body: GUIDELINES.map(g => `<div class="guide"><span class="ic-wrap">${icon(g.icon)}</span><div><b>${esc(g.t)}</b><p>${esc(g.d)}</p></div></div>`).join('') +
     `<p class="disclaimer" style="margin-top:16px">${esc(DISCLAIMER)}</p>`
 });
+ACTIONS['set-accent'] = el => { state.settings.accent = el.dataset.v; applyTheme(); saveState(); renderProfile(); };
 ACTIONS['set-theme'] = el => { state.settings.theme = el.dataset.v; applyTheme(); saveState(); renderProfile(); };
 ACTIONS['set-round'] = el => {
   state.settings.round5 = el.dataset.v === '5';

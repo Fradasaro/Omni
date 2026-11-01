@@ -1,9 +1,10 @@
 /* Service worker: l'app funziona offline dopo la prima apertura.
    Ad ogni rilascio aumenta CACHE_VERSION, così gli utenti ricevono i file nuovi. */
-const CACHE_VERSION = 'omni-v2.2.0';
+const CACHE_VERSION = 'omni-v2.3.0';
 const ASSETS = [
   './',
   './index.html',
+  './privacy.html',
   './manifest.webmanifest',
   './css/app.css',
   './fonts/PlusJakartaSans-var.woff',

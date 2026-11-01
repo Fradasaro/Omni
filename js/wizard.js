@@ -58,12 +58,14 @@ function renderWizard() {
       <hr class="divider">
       <label class="check" style="margin-bottom:14px"><input type="checkbox" data-change="wz-veg" ${cfg.slots.find(s => s.id === 'pranzo').veg ? 'checked' : ''}><span><b>Verdure a pranzo e cena</b><br><span class="muted xs">200 g a pasto, già conteggiate nel piano.</span></span></label>
       <div class="field"><label for="wz-water">Acqua al giorno</label><div class="input-suffix"><input id="wz-water" class="input" type="number" inputmode="numeric" step="250" value="${Wiz.water}"><span class="suffix">ml</span></div></div>
-      <div class="row" style="margin-top:16px"><button class="btn btn-ghost" data-action="wz-back">Indietro</button><span class="spacer"></span><button class="btn btn-primary" data-action="wz-finish">${icon('check', 'ic-sm')} Inizia</button></div>`;
+      <div class="row" style="margin-top:16px"><button class="btn btn-ghost" data-action="wz-back">Indietro</button><span class="spacer"></span><button class="btn btn-primary" data-action="wz-finish">${icon('check', 'ic-sm')} Inizia</button></div>
+      <p class="help" style="margin-top:12px;text-align:right">Toccando «Inizia» accetti i <a href="privacy.html" target="_blank" rel="noopener">termini d'uso</a>.</p>`;
   }
   $('#wizard-root').innerHTML = `<div class="wizard"><div class="wizard-card">
     <div class="wizard-brand"><div class="brand">${esc(APP_NAME)}<span class="dot">.</span></div><p>${esc(APP_TAGLINE)}</p></div>
     <div class="card">${steps}${body}</div>
     <p class="disclaimer">${esc(DISCLAIMER)}</p>
+    <div class="legal-links"><a href="privacy.html" target="_blank" rel="noopener">Privacy e termini d'uso</a></div>
   </div></div>`;
 
   const sex = $('[data-wz-sex]');

@@ -214,8 +214,37 @@ function createPicker(host, opts = {}) {
 }
 
 /* ---------------- Tema ---------------- */
-function applyTheme() {
+const ACCENTS = [
+  { v: 'menta', name: 'Menta', color: '#33e6a6' },
+  { v: 'lime', name: 'Lime', color: '#c4f23a' },
+  { v: 'blu', name: 'Blu', color: '#4c9dff' },
+  { v: 'arancio', name: 'Arancio', color: '#ff8a3d' },
+  { v: 'viola', name: 'Viola', color: '#a78bfa' }
+];
+const systemDark = () => window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+function effectiveTheme() {
   const t = state.settings.theme;
-  if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
-  else document.documentElement.removeAttribute('data-theme');
+  return t === 'light' || t === 'dark' ? t : (systemDark() ? 'dark' : 'light');
 }
+function applyTheme() {
+  const root = document.documentElement;
+  const t = state.settings.theme;
+  if (t === 'light' || t === 'dark') root.setAttribute('data-theme', t);
+  else root.removeAttribute('data-theme');
+  const a = state.settings.accent || 'menta';
+  if (a === 'menta') root.removeAttribute('data-accent'); else root.setAttribute('data-accent', a);
+  const dark = effectiveTheme() === 'dark';
+  $$('meta[name="theme-color"]').forEach(m => { m.removeAttribute('media'); m.setAttribute('content', dark ? '#000000' : '#f4f6f5'); });
+  const btn = $('#hdr-theme');
+  if (btn) {
+    btn.innerHTML = icon(dark ? 'sun' : 'moon');
+    btn.setAttribute('aria-label', dark ? 'Passa al tema chiaro' : 'Passa al tema scuro');
+    btn.title = btn.getAttribute('aria-label');
+  }
+}
+ACTIONS['toggle-theme'] = () => {
+  state.settings.theme = effectiveTheme() === 'dark' ? 'light' : 'dark';
+  applyTheme();
+  saveState();
+  if (typeof currentTab !== 'undefined' && currentTab === 'profilo') renderProfile();
+};

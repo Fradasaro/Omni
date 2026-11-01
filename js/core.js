@@ -142,7 +142,7 @@ function defaultPlanCfg() {
 function defaultState() {
   return {
     schemaVersion: SCHEMA_VERSION,
-    settings: { theme: 'system', round5: true, lastBackup: null, coachSkip: 0 },
+    settings: { theme: 'system', accent: 'menta', round5: true, lastBackup: null, coachSkip: 0, installHidden: false },
     profile: null,
     plan: null,          // { cfg, meals, target, basis, savedAt }
     customFoods: [],
