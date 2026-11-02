@@ -365,6 +365,7 @@ ACTIONS['meal-menu'] = el => {
     pm ? { a: 'plan', ic: 'zap', t: 'Inserisci dal piano', s: meal.items.length ? 'Sostituisce gli alimenti attuali' : '' } : null,
     mIdx > 0 ? { a: 'up', ic: 'arrowUp', t: 'Sposta su' } : null,
     mIdx < day.meals.length - 1 ? { a: 'down', ic: 'arrowDown', t: 'Sposta giù' } : null,
+    meal.items.length ? { a: 'recipe', ic: 'chef', t: 'Salva come ricetta', s: 'Per riaggiungerlo in un tocco' } : null,
     meal.items.length ? { a: 'clear', ic: 'rotate', t: 'Svuota il pasto' } : null,
     { a: 'delete', ic: 'trash', t: 'Elimina il pasto', danger: true }
   ].filter(Boolean);
@@ -379,6 +380,7 @@ ACTIONS['meal-menu'] = el => {
       if (a === 'rename') { const inp = $$('#view-oggi .meal-name')[mIdx]; if (inp) { inp.focus(); inp.select(); } }
       if (a === 'plan') ACTIONS['load-plan-meal']({ dataset: { m: mIdx } });
       if (a === 'up' || a === 'down') { const j = a === 'up' ? mIdx - 1 : mIdx + 1; [day.meals[mIdx], day.meals[j]] = [day.meals[j], day.meals[mIdx]]; commitToday(); }
+      if (a === 'recipe') recipeFromMeal(meal);
       if (a === 'clear') withUndo(`${meal.name} svuotato`, () => { meal.items = []; }, renderToday);
       if (a === 'delete') withUndo(`${meal.name} eliminato`, () => day.meals.splice(mIdx, 1), renderToday);
     })
@@ -427,6 +429,8 @@ ACTIONS['open-add-menu'] = () => {
     title: 'Aggiungi',
     body: `<div class="action-list">
       <button class="action brand" data-add="food"><span class="ic-wrap">${icon('search')}</span><span><b>Cerca un alimento</b><small>Dal catalogo, con porzioni e grammi</small></span></button>
+      <button class="action" data-add="scan"><span class="ic-wrap">${icon('barcode')}</span><span><b>Scansiona un prodotto</b><small>Dal codice a barre della confezione</small></span></button>
+      <button class="action" data-add="recipe"><span class="ic-wrap">${icon('chef')}</span><span><b>Una ricetta</b><small>Le tue ricette, divise in porzioni</small></span></button>
       <button class="action calm" data-add="free"><span class="ic-wrap">${icon('pizza')}</span><span><b>Pasto libero</b><small>Pizza, cena fuori, sushi… senza calcoli</small></span></button>
       <button class="action" data-add="quick"><span class="ic-wrap">${icon('zap')}</span><span><b>Aggiunta rapida</b><small>Solo calorie e macro, ad esempio da un'etichetta</small></span></button>
       <button class="action" data-add="water"><span class="ic-wrap">${icon('drop')}</span><span><b>Un bicchiere d'acqua</b><small>+250 ml</small></span></button>
@@ -438,6 +442,8 @@ ACTIONS['open-add-menu'] = () => {
       close();
       const a = b.dataset.add, m = suggestMealIdx();
       if (a === 'food') openAddFood(m);
+      if (a === 'scan') openScanner(m);
+      if (a === 'recipe') openRecipeLog(null, m);
       if (a === 'free') openFreeMeal(m);
       if (a === 'quick') openQuickAdd(m);
       if (a === 'water') ACTIONS.water({ dataset: { ml: 250 } });

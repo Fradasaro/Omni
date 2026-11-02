@@ -119,5 +119,6 @@ ACTIONS['wz-finish'] = () => {
   saveState();
   $('#wizard-root').innerHTML = '';
   bootApp();
-  toast(`Benvenuto${p.name ? ', ' + p.name : ''}! Il tuo piano è pronto.`, { icon: 'sparkles' });
+  /* Testo neutro: il sesso biologico serve alle formule, non a come chiamare chi usa l'app. */
+  toast(`Ecco fatto${p.name ? ', ' + p.name : ''}! Il tuo piano è pronto.`, { icon: 'sparkles' });
 };

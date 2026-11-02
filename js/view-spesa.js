@@ -39,11 +39,12 @@ function shoppingItems() {
 function renderShop() {
   $('#view-spesa').innerHTML = `
     <div class="seg subtabs" role="tablist">
-      <button type="button" data-action="shop-tab" data-v="lista" aria-pressed="${Shop.tab === 'lista'}">Lista della spesa</button>
-      <button type="button" data-action="shop-tab" data-v="alimenti" aria-pressed="${Shop.tab === 'alimenti'}">Dispensa e alimenti</button>
+      <button type="button" data-action="shop-tab" data-v="lista" aria-pressed="${Shop.tab === 'lista'}">Lista spesa</button>
+      <button type="button" data-action="shop-tab" data-v="alimenti" aria-pressed="${Shop.tab === 'alimenti'}">Alimenti</button>
+      <button type="button" data-action="shop-tab" data-v="ricette" aria-pressed="${Shop.tab === 'ricette'}">Ricette</button>
     </div>
     <div data-shop-body></div>`;
-  if (Shop.tab === 'lista') renderShopList(); else renderFoods();
+  if (Shop.tab === 'lista') renderShopList(); else if (Shop.tab === 'ricette') renderRecipes(); else renderFoods();
 }
 
 function renderShopList() {
@@ -105,7 +106,8 @@ function renderFoods() {
   <div class="split-wide">
     <div class="card">
       <div class="card-head"><div class="card-title">${icon('book')} Catalogo <span class="badge" data-food-count></span></div>
-        <button class="btn btn-soft btn-sm" data-action="food-new">${icon('plus', 'ic-sm')} Nuovo alimento</button></div>
+        <div class="row" style="gap:6px"><button class="btn btn-secondary btn-sm" data-action="scan-food">${icon('barcode', 'ic-sm')} Scansiona</button>
+        <button class="btn btn-soft btn-sm" data-action="food-new">${icon('plus', 'ic-sm')} Nuovo alimento</button></div></div>
       <div class="row" style="margin-bottom:10px">
         <input class="input" placeholder="Cerca…" value="${esc(Shop.q)}" data-input="food-q" aria-label="Cerca nel catalogo">
         <select class="input" style="max-width:170px" data-change="food-cat" aria-label="Categoria">
@@ -192,8 +194,10 @@ ACTIONS['food-del'] = el => {
   withUndo(`${f.name} eliminato`, () => { f.archived = true; delete state.pantry[f.id]; invalidateFoods(); }, () => { invalidateFoods(); renderFoods(); });
 };
 
-function openFoodForm(id) {
-  const f = id ? clone(state.customFoods.find(x => x.id === id)) : { name: '', cat: 'P', aisle: AISLES.DISP, p: 0, c: 0, g: 0, kcal: 0, tags: [], u: null };
+/* prefill: valori già pronti (es. dallo scanner); onSaved(alimento) dopo il salvataggio. */
+function openFoodForm(id, { prefill = null, onSaved = null } = {}) {
+  const f = id ? clone(state.customFoods.find(x => x.id === id))
+    : Object.assign({ name: '', cat: 'P', aisle: AISLES.DISP, p: 0, c: 0, g: 0, kcal: 0, tags: [], u: null }, prefill || {});
   let cat = f.cat;
   openSheet({
     title: id ? 'Modifica alimento' : 'Nuovo alimento',
@@ -243,13 +247,14 @@ function openFoodForm(id) {
           tags: $$('[data-tag]', root).filter(x => x.checked).map(x => x.dataset.tag),
           u: un && ug ? [un, ug] : null, st: 'k', custom: true
         };
+        if (f.ean) item.ean = f.ean;
         if (id) state.customFoods[state.customFoods.findIndex(x => x.id === id)] = item;
         else { state.customFoods.unshift(item); state.pantry[item.id] = true; }
         invalidateFoods();
         saveState();
         close();
         refreshAll();
-        toast(`${name} salvato`);
+        if (onSaved) onSaved(item); else toast(`${name} salvato`);
       });
     }
   });

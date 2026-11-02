@@ -778,6 +778,11 @@ details.adv[open] summary .ic { transform: rotate(180deg); }
 .food-row:first-child { border-top: 0; }
 .food-list { max-height: 520px; overflow-y: auto; }
 
+/* ---------- Scanner ---------- */
+.scan-box { position: relative; border-radius: var(--r-md); overflow: hidden; background: #000; aspect-ratio: 4 / 3; }
+.scan-box video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.scan-frame { position: absolute; inset: 30% 12%; border: 2px solid var(--brand); border-radius: 12px; box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.35); }
+
 /* ---------- Profilo ---------- */
 .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .stat { background: var(--surface-2); border-radius: var(--r-md); padding: 12px; }

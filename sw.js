@@ -1,6 +1,6 @@
 /* Service worker: l'app funziona offline dopo la prima apertura.
    Ad ogni rilascio aumenta CACHE_VERSION, così gli utenti ricevono i file nuovi. */
-const CACHE_VERSION = 'omni-v2.3.1';
+const CACHE_VERSION = 'omni-v2.4';
 const ASSETS = [
   './',
   './index.html',
@@ -19,6 +19,10 @@ const ASSETS = [
   './js/view-scambi.js',
   './js/view-spesa.js',
   './js/view-profilo.js',
+  './js/scanner.js',
+  './js/vendor/zxing.min.js',
+  './js/recipes.js',
+  './js/reminders.js',
   './js/wizard.js',
   './js/main.js',
   './icons/icon-192.png',

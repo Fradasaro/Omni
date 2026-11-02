@@ -146,6 +146,7 @@ function defaultState() {
     profile: null,
     plan: null,          // { cfg, meals, target, basis, savedAt }
     customFoods: [],
+    recipes: [],         // { id, name, servings, items: [{ foodId, grams }] }
     days: {},
     weightLogs: [],
     pantry: {},          // foodId -> true (alimenti in casa)

@@ -99,6 +99,12 @@ function renderProfile() {
       </div>
 
       <div class="card">
+        <div class="card-head"><div class="card-title">${icon('bell')} Promemoria</div></div>
+        <p class="small muted" style="margin-bottom:12px">Pasti, acqua e pesata settimanale nel calendario del telefono: ti avvisa anche ad app chiusa.</p>
+        <button class="btn btn-secondary btn-block" data-action="reminders">${icon('calendar', 'ic-sm')} Imposta i promemoria</button>
+      </div>
+
+      <div class="card">
         <div class="card-head"><div class="card-title">${icon('book')} Linee guida ${esc(APP_NAME)}</div></div>
         <p class="small muted" style="margin-bottom:12px">Le regole d'oro per usare l'app in modo sano e sostenibile.</p>
         <button class="btn btn-secondary btn-block" data-action="guidelines">Leggi le linee guida</button>
