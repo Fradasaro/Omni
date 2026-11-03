@@ -136,21 +136,28 @@ async function handleBarcode(code, mealIdx, closeScanner) {
     prefill = await fetchOffProduct(code);
   } catch (e) {
     closeScanner();
-    toast(navigator.onLine === false ? 'Sei offline: inserisci i valori dall’etichetta' : 'Open Food Facts non risponde: inserisci i valori dall’etichetta', { icon: 'alert' });
-    return openScannedForm({ ean: code }, mealIdx);
+    toast(navigator.onLine === false ? 'Sei offline: leggi i valori dall’etichetta' : 'Open Food Facts non risponde: leggi i valori dall’etichetta', { icon: 'alert' });
+    return openScannedForm({ ean: code }, mealIdx, scanNote(null));
   }
   closeScanner();
   if (!prefill) {
-    toast('Prodotto non trovato: inserisci i valori dall’etichetta', { icon: 'info' });
-    return openScannedForm({ ean: code }, mealIdx);
+    toast('Prodotto non trovato: leggi i valori dall’etichetta', { icon: 'info' });
+    return openScannedForm({ ean: code }, mealIdx, scanNote(null));
   }
-  openScannedForm(prefill, mealIdx);
-  toast(prefill.partial ? 'Trovato, ma mancano alcuni valori: completali dall’etichetta' : 'Trovato! Controlla i valori e salva', { icon: 'barcode' });
+  openScannedForm(prefill, mealIdx, scanNote(code));
+  toast(prefill.partial ? 'Trovato, ma mancano alcuni valori: completali dall’etichetta' : 'Trovato! Confronta i valori con l’etichetta', { icon: 'barcode' });
 }
 
-function openScannedForm(prefill, mealIdx) {
+/* I dati collaborativi possono essere vecchi o sbagliati: l'etichetta ha sempre l'ultima parola. */
+function scanNote(code) {
+  return code
+    ? `<div class="callout" style="margin-bottom:14px">${icon('info')}<span>Valori da Open Food Facts, un database collaborativo: a volte sono vecchi o sbagliati. Se non combaciano con la confezione, tocca <b style="display:inline">Leggi dall'etichetta</b>. <a href="https://world.openfoodfacts.org/product/${esc(code)}" target="_blank" rel="noopener">Correggili anche su Open Food Facts</a>.</span></div>`
+    : `<div class="callout" style="margin-bottom:14px">${icon('camera')}<span>Fotografa la tabella nutrizionale con <b style="display:inline">Leggi dall'etichetta</b>, oppure inserisci i valori a mano.</span></div>`;
+}
+
+function openScannedForm(prefill, mealIdx, note = '') {
   openFoodForm(null, {
-    prefill,
+    prefill, note,
     onSaved: item => {
       if (mealIdx != null) openAddFood(mealIdx, { foodId: item.id, grams: item.u ? item.u[1] : 100 });
       else toast(`${item.name} aggiunto al catalogo`, { icon: 'barcode' });

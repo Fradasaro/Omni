@@ -781,6 +781,7 @@ details.adv[open] summary .ic { transform: rotate(180deg); }
 /* ---------- Scanner ---------- */
 .scan-box { position: relative; border-radius: var(--r-md); overflow: hidden; background: #000; aspect-ratio: 4 / 3; }
 .scan-box video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.input.ocr-filled { border-color: var(--brand); }
 .scan-frame { position: absolute; inset: 30% 12%; border: 2px solid var(--brand); border-radius: 12px; box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.35); }
 
 /* ---------- Profilo ---------- */

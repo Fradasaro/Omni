@@ -28,6 +28,8 @@ Aperta con doppio clic (`file://`) l'app funziona lo stesso, ma senza modalità 
 | `js/view-*.js` | Le cinque sezioni: Oggi, Piano, Scambi, Spesa, Profilo |
 | `js/scanner.js` | Codice a barre → alimento (fotocamera con `BarcodeDetector` o, su Safari/iPhone, ZXing; oppure cifre a mano; dati Open Food Facts) |
 | `js/vendor/zxing.min.js` | Libreria ZXing (`@zxing/library` 0.21.3, build UMD), caricata solo quando si apre lo scanner |
+| `js/ocr.js` | Lettura della tabella nutrizionale da foto, sul dispositivo; controllo che calorie e macro tornino |
+| `js/vendor/tesseract/` | Tesseract.js 5.1.1 + core WebAssembly + lingua italiana (`tessdata` best_int), caricati solo al primo uso e salvati in una cache a parte dal service worker |
 | `js/recipes.js` | Ricette divise in porzioni, aggiunte al diario come ingredienti |
 | `js/reminders.js` | Promemoria come file calendario `.ics` (pasti, acqua, pesata) |
 | `js/wizard.js` | Primo avvio in tre passi |
@@ -43,4 +45,4 @@ Aperta con doppio clic (`file://`) l'app funziona lo stesso, ma senza modalità 
 
 ## Licenze di terze parti
 
-Font Plus Jakarta Sans (SIL OFL 1.1), icone Lucide (ISC) e lettore di codici a barre ZXing (Apache 2.0): vedi la cartella `licenses/`.
+Font Plus Jakarta Sans (SIL OFL 1.1), icone Lucide (ISC), lettore di codici a barre ZXing e lettore di testo Tesseract.js con i dati di lingua `tessdata` (Apache 2.0): vedi la cartella `licenses/`.

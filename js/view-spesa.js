@@ -194,25 +194,29 @@ ACTIONS['food-del'] = el => {
   withUndo(`${f.name} eliminato`, () => { f.archived = true; delete state.pantry[f.id]; invalidateFoods(); }, () => { invalidateFoods(); renderFoods(); });
 };
 
-/* prefill: valori già pronti (es. dallo scanner); onSaved(alimento) dopo il salvataggio. */
-function openFoodForm(id, { prefill = null, onSaved = null } = {}) {
+/* prefill: valori già pronti (es. dallo scanner); note: avviso HTML in cima;
+   onSaved(alimento) dopo il salvataggio. */
+function openFoodForm(id, { prefill = null, note = '', onSaved = null } = {}) {
   const f = id ? clone(state.customFoods.find(x => x.id === id))
     : Object.assign({ name: '', cat: 'P', aisle: AISLES.DISP, p: 0, c: 0, g: 0, kcal: 0, tags: [], u: null }, prefill || {});
   let cat = f.cat;
   openSheet({
     title: id ? 'Modifica alimento' : 'Nuovo alimento',
-    body: `
+    body: `${note}
       <div class="field"><label for="cf-name">Nome e marca</label><input id="cf-name" class="input" maxlength="60" value="${esc(f.name)}" placeholder="Es. Pane proteico Marca X" autofocus></div>
       <div class="field"><span class="field-label">Categoria principale</span>
         <div class="seg" data-cf-cat>${['P', 'C', 'G', 'V'].map(c => `<button type="button" data-c="${c}" aria-pressed="${cat === c}">${CAT_LABEL[c]}</button>`).join('')}</div></div>
       <div class="field"><label for="cf-aisle">Reparto</label><select id="cf-aisle" class="input">${Object.values(AISLES).map(a => `<option ${f.aisle === a ? 'selected' : ''}>${esc(a)}</option>`).join('')}</select></div>
-      <div class="section-label">Valori per 100 g (dall'etichetta)</div>
+      <div class="between" style="margin-bottom:8px;gap:8px"><div class="section-label" style="margin:0">Valori per 100 g (dall'etichetta)</div>
+        <label class="btn btn-soft btn-sm">${icon('camera', 'ic-sm')} Leggi dall'etichetta<input type="file" accept="image/*" capture="environment" class="sr-only" data-cf-ocr></label></div>
+      <p class="help hidden" data-cf-ocr-msg style="margin:-2px 0 10px"></p>
       <div class="grid-2">
         <div class="field"><label for="cf-p" class="c-pro">Proteine (g)</label><input id="cf-p" class="input input-num" type="number" inputmode="decimal" step="0.1" min="0" value="${f.p}"></div>
         <div class="field"><label for="cf-c" class="c-cho">Carboidrati (g)</label><input id="cf-c" class="input input-num" type="number" inputmode="decimal" step="0.1" min="0" value="${f.c}"></div>
         <div class="field"><label for="cf-g" class="c-fat">Grassi (g)</label><input id="cf-g" class="input input-num" type="number" inputmode="decimal" step="0.1" min="0" value="${f.g}"></div>
         <div class="field"><label for="cf-k">Calorie (kcal)</label><input id="cf-k" class="input input-num" type="number" inputmode="decimal" min="0" value="${f.kcal || ''}" placeholder="auto"></div>
       </div>
+      <div class="callout hidden" data-cf-warn style="margin-bottom:12px"></div>
       <div class="section-label">Porzione (facoltativa)</div>
       <div class="grid-2">
         <div class="field"><input id="cf-un" class="input" maxlength="20" placeholder="Es. fetta, barretta" value="${esc(f.u ? f.u[0] : '')}" aria-label="Nome porzione"></div>
@@ -231,9 +235,38 @@ function openFoodForm(id, { prefill = null, onSaved = null } = {}) {
       });
       const v = s => Math.max(0, num(root.querySelector(s).value, 0));
       const kIn = root.querySelector('#cf-k');
-      const autoK = () => { kIn.placeholder = fmt0(v('#cf-p') * 4 + v('#cf-c') * 4 + v('#cf-g') * 9) || 'auto'; };
-      ['#cf-p', '#cf-c', '#cf-g'].forEach(s => root.querySelector(s).addEventListener('input', autoK));
+      const warn = root.querySelector('[data-cf-warn]');
+      const autoK = () => {
+        kIn.placeholder = fmt0(v('#cf-p') * 4 + v('#cf-c') * 4 + v('#cf-g') * 9) || 'auto';
+        const mm = kIn.value.trim() ? macroMismatch(v('#cf-k'), v('#cf-p'), v('#cf-c'), v('#cf-g')) : null;
+        warn.classList.toggle('hidden', !mm);
+        if (mm) warn.innerHTML = `${icon('alert')}<span>Calorie e macro non tornano: dai macro risultano circa ${fmt0(mm.est)} kcal, non ${fmt0(v('#cf-k'))}. Ricontrolla i valori con l'etichetta.</span>`;
+      };
+      ['#cf-p', '#cf-c', '#cf-g', '#cf-k'].forEach(s => root.querySelector(s).addEventListener('input', autoK));
       autoK();
+
+      const ocrMsg = root.querySelector('[data-cf-ocr-msg]');
+      const say = txt => { ocrMsg.textContent = txt; ocrMsg.classList.toggle('hidden', !txt); };
+      root.querySelector('[data-cf-ocr]').addEventListener('change', async e => {
+        const file = e.target.files[0];
+        e.target.value = '';
+        if (!file) return;
+        try {
+          const r = await readLabelPhoto(file, say);
+          if (!root.isConnected) return;
+          const found = [['#cf-p', r.p], ['#cf-c', r.c], ['#cf-g', r.g], ['#cf-k', r.kcal]].filter(([, val]) => val != null);
+          found.forEach(([s, val]) => { const el = root.querySelector(s); el.value = val; el.classList.add('ocr-filled'); });
+          autoK();
+          const est = { p: 'Le proteine', c: 'I carboidrati', g: 'I grassi' }[r.estimated];
+          if (found.length === 4 && est) say(`${est} non si leggevano: li ho ricavati dalle calorie (${fmt1(r[r.estimated])} g). Controlla tutti i valori con l’etichetta prima di salvare.`);
+          else if (found.length === 4) say('Valori letti dall’etichetta: controllali prima di salvare.');
+          else if (found.length) say(`Letti ${found.length} valori su 4: completa gli altri a mano.`);
+          else say('Non sono riuscito a leggere i valori. Riprova con una foto più vicina e dritta, senza riflessi, oppure inseriscili a mano.');
+        } catch (err) {
+          console.error(err);
+          if (root.isConnected) say(navigator.onLine === false && !_ocrWorker ? 'Serve la connessione per scaricare il lettore la prima volta.' : 'Lettura non riuscita: inserisci i valori a mano.');
+        }
+      });
       root.querySelector('[data-cancel]').addEventListener('click', close);
       root.querySelector('[data-ok]').addEventListener('click', () => {
         const name = root.querySelector('#cf-name').value.trim();

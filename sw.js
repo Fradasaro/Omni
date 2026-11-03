@@ -1,6 +1,9 @@
 /* Service worker: l'app funziona offline dopo la prima apertura.
    Ad ogni rilascio aumenta CACHE_VERSION, così gli utenti ricevono i file nuovi. */
 const CACHE_VERSION = 'omni-v2.4';
+/* Il lettore di etichette (~6 MB) non si precarica: si salva al primo uso in una
+   cache sua, che non si svuota a ogni rilascio. Cambiala solo se aggiorni Tesseract. */
+const OCR_CACHE = 'omni-ocr-tesseract-5.1.1';
 const ASSETS = [
   './',
   './index.html',
@@ -20,6 +23,7 @@ const ASSETS = [
   './js/view-spesa.js',
   './js/view-profilo.js',
   './js/scanner.js',
+  './js/ocr.js',
   './js/vendor/zxing.min.js',
   './js/recipes.js',
   './js/reminders.js',
@@ -45,7 +49,7 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE_VERSION).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE_VERSION && k !== OCR_CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -62,8 +66,9 @@ self.addEventListener('fetch', event => {
     }).catch(() => caches.match('./index.html')));
     return;
   }
+  const bucket = new URL(req.url).pathname.includes('/js/vendor/tesseract/') ? OCR_CACHE : CACHE_VERSION;
   event.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => {
-    if (res.ok) { const copy = res.clone(); caches.open(CACHE_VERSION).then(c => c.put(req, copy)); }
+    if (res.ok) { const copy = res.clone(); caches.open(bucket).then(c => c.put(req, copy)); }
     return res;
   })));
 });
