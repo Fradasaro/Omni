@@ -1,6 +1,6 @@
 /* Service worker: l'app funziona offline dopo la prima apertura.
    Ad ogni rilascio aumenta CACHE_VERSION, così gli utenti ricevono i file nuovi. */
-const CACHE_VERSION = 'omni-v2.4';
+const CACHE_VERSION = 'omni-v2.5';
 /* Il lettore di etichette (~6 MB) non si precarica: si salva al primo uso in una
    cache sua, che non si svuota a ogni rilascio. Cambiala solo se aggiorni Tesseract. */
 const OCR_CACHE = 'omni-ocr-tesseract-5.1.1';
@@ -27,6 +27,8 @@ const ASSETS = [
   './js/vendor/zxing.min.js',
   './js/recipes.js',
   './js/reminders.js',
+  './js/week.js',
+  './js/tour.js',
   './js/wizard.js',
   './js/main.js',
   './icons/icon-192.png',

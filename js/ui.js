@@ -213,6 +213,25 @@ function createPicker(host, opts = {}) {
   };
 }
 
+/* ---------------- Condivisione ----------------
+   Sul telefono apre il menu Condividi (iCloud Drive, Google Drive, WhatsApp…);
+   altrove, o se il browser non può condividere file, scarica il file.
+   Restituisce 'shared', 'downloaded' oppure 'cancelled'. */
+const canShareText = () => !!navigator.share && isMobile();
+async function shareFile(name, text, type) {
+  const file = typeof File === 'function' ? new File([text], name, { type }) : null;
+  if (file && isMobile() && navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: name }); return 'shared'; }
+    catch (e) { if (e && e.name === 'AbortError') return 'cancelled'; /* altrimenti si scarica */ }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  return 'downloaded';
+}
+
 /* ---------------- Tema ---------------- */
 const ACCENTS = [
   { v: 'menta', name: 'Menta', color: '#33e6a6' },

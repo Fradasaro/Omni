@@ -87,7 +87,7 @@ function renderShopList() {
           </div>`).join('')}</div>`;
       }).join('') : `<div class="empty">${icon('shop')}<b>Lista vuota</b>${Shop.source === 'plan' ? 'Salva un piano nella sezione Piano.' : 'Nessun alimento nel periodo scelto.'}</div>`}
       <div class="row-wrap" style="margin-top:12px">
-        <button class="btn btn-secondary btn-sm" data-action="sh-copy">${icon('copy', 'ic-sm')} Copia lista</button>
+        <button class="btn btn-secondary btn-sm" data-action="sh-copy">${canShareText() ? `${icon('share', 'ic-sm')} Condividi lista` : `${icon('copy', 'ic-sm')} Copia lista`}</button>
         <button class="btn btn-ghost btn-sm" data-action="sh-reset">${icon('undo', 'ic-sm')} Togli le spunte</button>
       </div>
     </div>
@@ -171,6 +171,10 @@ ACTIONS['sh-reset'] = () => withUndo('Spunte tolte dalla lista', () => { state.c
 ACTIONS['sh-copy'] = async () => {
   const groups = shoppingItems();
   const txt = `Lista della spesa · ${APP_NAME}\n` + groups.map(([a, items]) => `\n${a}\n` + items.map(i => `${state.cart[i.key] ? '✓' : '•'} ${i.label}${i.qty ? ' — ' + i.qty : ''}`).join('\n')).join('\n');
+  if (canShareText()) {
+    try { await navigator.share({ title: 'Lista della spesa', text: txt }); return; }
+    catch (e) { if (e && e.name === 'AbortError') return; }
+  }
   try { await navigator.clipboard.writeText(txt); toast('Lista copiata negli appunti', { icon: 'copy' }); }
   catch { toast('Copia non disponibile su questo browser', { icon: 'info' }); }
 };

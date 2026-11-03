@@ -1,4 +1,4 @@
-# Omni 2.4
+# Omni 2.5
 
 Web app (PWA) per pianificare, registrare e scambiare i pasti. Nessun server, nessuna dipendenza: HTML, CSS e JavaScript puri. I dati restano nel `localStorage` del dispositivo. L'unica chiamata esterna è lo scanner, che invia a Open Food Facts solo il codice a barre.
 
@@ -32,6 +32,8 @@ Aperta con doppio clic (`file://`) l'app funziona lo stesso, ma senza modalità 
 | `js/vendor/tesseract/` | Tesseract.js 5.1.1 + core WebAssembly + lingua italiana (`tessdata` best_int), caricati solo al primo uso e salvati in una cache a parte dal service worker |
 | `js/recipes.js` | Ricette divise in porzioni, aggiunte al diario come ingredienti |
 | `js/reminders.js` | Promemoria come file calendario `.ics` (pasti, acqua, pesata) |
+| `js/week.js` | Riepilogo degli ultimi 7 giorni (da Oggi › «La settimana») |
+| `js/tour.js` | Guida al primo avvio e suggerimenti una tantum (`settings.tourDone`, `settings.tipsSeen`) |
 | `js/wizard.js` | Primo avvio in tre passi |
 | `js/main.js` | Avvio e navigazione |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Installazione come app e funzionamento offline |

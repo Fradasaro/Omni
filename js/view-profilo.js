@@ -34,18 +34,101 @@ function planOutdated() {
   return Math.abs(b.weight - p.weight) >= 1 || b.pal !== p.pal || b.age !== p.age || b.height !== p.height || b.sex !== p.sex || b.formula !== p.formula || (b.formula === 'katch' && b.bf !== p.bf);
 }
 
+/* ---------------- Navigazione: riepilogo + menu, una pagina per voce ----------------
+   Su telefono si vede il menu oppure la pagina (con "indietro"); da 961 px in su
+   menu a sinistra e pagina a destra. Le pagine entrano nella cronologia
+   (#profilo/peso), così il tasto indietro del telefono torna al menu. */
+const Profile = { page: null };
+const PF_PAGES = { dati: 'I tuoi dati', peso: 'Peso e andamento', aspetto: 'Aspetto', preferenze: 'Preferenze', backup: 'Backup e dati' };
+const pfWide = () => window.matchMedia('(min-width: 961px)').matches;
+window.matchMedia('(min-width: 961px)').addEventListener?.('change', () => { if (currentTab === 'profilo' && state.profile) renderProfile(); });
+
+function pfGo(page) {
+  Profile.page = PF_PAGES[page] ? page : null;
+  history.pushState({ pf: Profile.page }, '', '#profilo' + (Profile.page ? '/' + Profile.page : ''));
+  renderProfile();
+  if (!pfWide()) window.scrollTo(0, 0);
+}
+ACTIONS['pf-open'] = el => {
+  pfGo(el.dataset.p);
+  if (el.dataset.focus) { const inp = $(el.dataset.focus); if (inp) inp.focus(); }
+};
+ACTIONS['pf-back'] = () => {
+  if (history.state && history.state.pf) return history.back();
+  Profile.page = null;
+  history.replaceState(null, '', '#profilo');
+  renderProfile();
+};
+window.addEventListener('popstate', () => {
+  const [tab, sub] = location.hash.slice(1).split('/');
+  if (tab !== 'profilo' || !state.profile) return;
+  Profile.page = PF_PAGES[sub] ? sub : null;
+  if (currentTab === 'profilo') renderProfile(); else switchTab('profilo');
+});
+
+function backupAgeDays() {
+  const lb = state.settings.lastBackup;
+  return lb ? daysBetween(lb.slice(0, 10), todayISO()) : null;
+}
+function reminderStatus() {
+  const r = state.settings.reminders;
+  if (!r) return 'Da impostare';
+  const n = planSlots().filter(s => r.meals[s.id]).length + (r.water ? 1 : 0) + (r.weigh ? 1 : 0);
+  return n ? `${n} ${n === 1 ? 'impostato' : 'impostati'}` : 'Nessuno';
+}
+
+function pfSummaryHtml(p, T, last) {
+  const initials = (p.name || APP_NAME).trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+  const w = last ? last.weight : p.weight;
+  return `<div class="card pf-summary">
+    <div class="row" style="gap:14px">
+      <div class="pf-avatar" aria-hidden="true">${esc(initials || 'OM')}</div>
+      <div style="flex:1;min-width:0"><div class="pf-name">${esc(p.name || 'Il tuo profilo')}</div>
+        <div class="small muted num">${fmt1(w)} kg · obiettivo ${fmt1(p.targetWeight)} kg · ${fmt0(T.kcal)} kcal</div></div>
+    </div>
+    <div class="grid-2" style="margin-top:14px">
+      <button class="btn btn-secondary btn-sm" data-action="pf-open" data-p="peso" data-focus="[data-w-val]">${icon('scale', 'ic-sm')} Registra peso</button>
+      <button class="btn btn-secondary btn-sm" data-action="go" data-tab="piano">${icon('target', 'ic-sm')} Piano</button>
+    </div>
+    ${planOutdated() ? `<div class="callout" style="margin-top:12px">${icon('refresh')}<div style="flex:1"><b>I tuoi dati sono cambiati</b><br><span class="muted">Il piano è calcolato su ${fmt1(state.plan.basis.weight)} kg. Vuoi ricalcolare i target? I giorni già registrati non cambiano.</span>
+      <div style="margin-top:10px"><button class="btn btn-primary btn-sm" data-action="pf-replan">Aggiorna il piano</button></div></div></div>` : ''}
+  </div>`;
+}
+
+function pfMenuHtml(p, last, active) {
+  const bd = backupAgeDays();
+  const backupWarn = bd == null ? Object.keys(state.days).length > 0 : bd > 30;
+  const accent = (ACCENTS.find(a => a.v === (state.settings.accent || 'menta')) || ACCENTS[0]).name;
+  const theme = { system: 'Sistema', light: 'Chiaro', dark: 'Scuro' }[state.settings.theme] || 'Sistema';
+  const row = (o) => `<${o.href ? `a href="${o.href}" target="_blank" rel="noopener"` : 'button type="button"'} class="action pf-row" ${o.p ? `data-action="pf-open" data-p="${o.p}"` : o.act ? `data-action="${o.act}"` : ''} ${o.p && o.p === active ? 'aria-current="page"' : ''}>
+      <span class="ic-wrap">${icon(o.ic)}</span><b class="pf-row-t">${esc(o.t)}</b>
+      ${o.v ? `<span class="pf-val ${o.warn ? 'warn' : ''}">${esc(o.v)}</span>` : ''}${icon(o.href ? 'external' : 'right', 'ic-sm faint')}
+    </${o.href ? 'a' : 'button'}>`;
+  return `<div class="card pf-menu"><nav class="action-list" aria-label="Impostazioni del profilo">
+    ${[
+      { p: 'dati', ic: 'user', t: 'I tuoi dati', v: `${p.age} anni · ${p.height} cm` },
+      { p: 'peso', ic: 'chart', t: 'Peso e andamento', v: last ? `${fmt1(last.weight)} kg` : 'Nessuna pesata' },
+      { act: 'reminders', ic: 'bell', t: 'Promemoria', v: reminderStatus() },
+      { p: 'aspetto', ic: 'palette', t: 'Aspetto', v: `${theme} · ${accent}` },
+      { p: 'preferenze', ic: 'sliders', t: 'Preferenze', v: `Grammi a ${state.settings.round5 ? '5' : '1'} g` },
+      { p: 'backup', ic: 'shield', t: 'Backup e dati', v: bd == null ? 'Mai fatto' : bd === 0 ? 'Oggi' : `${bd} ${bd === 1 ? 'giorno' : 'giorni'} fa`, warn: backupWarn },
+      { act: 'guidelines', ic: 'book', t: `Linee guida ${APP_NAME}` },
+      { href: 'privacy.html', ic: 'file', t: 'Privacy e termini d’uso' }
+    ].map(row).join('')}
+  </nav></div>`;
+}
+
 function renderProfile() {
   const p = state.profile, bio = computeBiometrics(p), T = target();
   const logs = state.weightLogs.slice().sort((a, b) => a.date.localeCompare(b.date));
   const last = logs[logs.length - 1];
   const theme = state.settings.theme;
   const lb = state.settings.lastBackup;
+  const page = Profile.page || (pfWide() ? 'dati' : null);
 
-  $('#view-profilo').innerHTML = `
-  <div class="split-wide">
-    <div>
+  const pages = {
+    dati: () => `
       <div class="card" data-pf>
-        <div class="card-head"><div class="card-title">${icon('user')} I tuoi dati</div></div>
         <div class="field"><label for="pf-name">Nome</label><input id="pf-name" class="input" maxlength="40" value="${esc(p.name)}"></div>
         <div class="field"><span class="field-label">Sesso biologico</span>
           <div class="seg" data-pf-sex><button type="button" data-v="M" aria-pressed="${p.sex === 'M'}">Uomo</button><button type="button" data-v="F" aria-pressed="${p.sex === 'F'}">Donna</button></div>
@@ -76,14 +159,11 @@ function renderProfile() {
           <div class="target"><small class="c-fat">Grassi</small><b>${fmt0(T.g)}<span> g</span></b></div>
         </div>
         <p class="help" style="margin-top:8px">${esc(state.plan ? goalName(state.plan.cfg.goal) : '')}${state.plan && state.plan.cfg.pref ? ' · ' + esc((PREFS.find(x => x.v === state.plan.cfg.pref) || {}).name || '') : ''}</p>
-        ${planOutdated() ? `<div class="callout" style="margin-top:12px">${icon('refresh')}<div style="flex:1"><b>I tuoi dati sono cambiati</b><br><span class="muted">Il piano è calcolato su ${fmt1(state.plan.basis.weight)} kg. Vuoi ricalcolare i target con i dati attuali? I giorni già registrati non cambiano.</span>
-          <div style="margin-top:10px"><button class="btn btn-primary btn-sm" data-action="pf-replan">Aggiorna il piano</button></div></div></div>` : ''}
-      </div>
-    </div>
+      </div>`,
 
-    <div>
+    peso: () => `
       <div class="card">
-        <div class="card-head"><div class="card-title">${icon('chart')} Peso</div>
+        <div class="card-head"><div class="card-title">${icon('chart')} Registra una pesata</div>
           <span class="small muted num">${last ? `${fmt1(last.weight)} kg · obiettivo ${fmt1(p.targetWeight)} kg` : ''}</span></div>
         <div class="row-wrap" style="margin-bottom:12px">
           <input class="input" type="date" value="${todayISO()}" max="${todayISO()}" data-w-date style="flex:1;min-width:140px" aria-label="Data">
@@ -96,22 +176,10 @@ function renderProfile() {
           ${logs.slice().reverse().slice(0, 30).map(l => `<div class="log-row"><b class="num">${fmt1(l.weight)} kg</b><span class="muted">${esc(fmtDate(l.date, { day: 'numeric', month: 'long', year: 'numeric' }))}</span>${l.note ? `<span class="faint xs">${esc(l.note)}</span>` : ''}<span class="spacer"></span>
             <button class="icon-btn sm" data-action="w-del" data-d="${l.date}" aria-label="Elimina pesata">${icon('x', 'ic-sm')}</button></div>`).join('')}
         </div>
-      </div>
+      </div>`,
 
+    aspetto: () => `
       <div class="card">
-        <div class="card-head"><div class="card-title">${icon('bell')} Promemoria</div></div>
-        <p class="small muted" style="margin-bottom:12px">Pasti, acqua e pesata settimanale nel calendario del telefono: ti avvisa anche ad app chiusa.</p>
-        <button class="btn btn-secondary btn-block" data-action="reminders">${icon('calendar', 'ic-sm')} Imposta i promemoria</button>
-      </div>
-
-      <div class="card">
-        <div class="card-head"><div class="card-title">${icon('book')} Linee guida ${esc(APP_NAME)}</div></div>
-        <p class="small muted" style="margin-bottom:12px">Le regole d'oro per usare l'app in modo sano e sostenibile.</p>
-        <button class="btn btn-secondary btn-block" data-action="guidelines">Leggi le linee guida</button>
-      </div>
-
-      <div class="card">
-        <div class="card-head"><div class="card-title">${icon('settings')} Impostazioni</div></div>
         <div class="setting"><div class="setting-txt"><b>Tema</b><small>Segue il telefono, oppure fisso</small></div>
           <div class="seg" style="min-width:210px">
             ${[['system', 'Sistema'], ['light', 'Chiaro'], ['dark', 'Scuro']].map(([v, l]) => `<button type="button" data-action="set-theme" data-v="${v}" aria-pressed="${theme === v}">${l}</button>`).join('')}
@@ -120,31 +188,49 @@ function renderProfile() {
           <div class="swatches" role="group" aria-label="Colore d'accento">
             ${ACCENTS.map(a => `<button type="button" class="swatch" style="background:${a.color}" data-action="set-accent" data-v="${a.v}" aria-pressed="${(state.settings.accent || 'menta') === a.v}" aria-label="${a.name}" title="${a.name}">${(state.settings.accent || 'menta') === a.v ? icon('check') : ''}</button>`).join('')}
           </div></div>
+      </div>`,
+
+    preferenze: () => `
+      <div class="card">
         <div class="setting"><div class="setting-txt"><b>Arrotondamento grammi</b><small>Per piano e scambi</small></div>
           <div class="seg" style="min-width:170px">
             <button type="button" data-action="set-round" data-v="5" aria-pressed="${state.settings.round5}">5 g</button>
             <button type="button" data-action="set-round" data-v="1" aria-pressed="${!state.settings.round5}">1 g</button>
           </div></div>
-      </div>
+      </div>`,
 
+    backup: () => `
       <div class="card">
         <div class="card-head"><div class="card-title">${icon('shield')} I tuoi dati restano qui</div></div>
         <p class="small muted">Tutto è salvato solo su questo dispositivo: nessun account, nessun server. Su iPhone il browser può cancellare i dati dei siti non usati per settimane: installa l'app sulla schermata Home e scarica un backup ogni tanto.</p>
         <p class="xs faint" style="margin:8px 0 12px">Ultimo backup: ${lb ? esc(new Date(lb).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })) : 'mai'}</p>
         <div class="row-wrap">
-          <button class="btn btn-secondary" data-action="backup-export">${icon('download', 'ic-sm')} Scarica backup</button>
+          <button class="btn btn-secondary" data-action="backup-export">${icon(isMobile() ? 'share' : 'download', 'ic-sm')} ${isMobile() ? 'Salva backup' : 'Scarica backup'}</button>
           <label class="btn btn-secondary">${icon('upload', 'ic-sm')} Ripristina<input type="file" accept=".json,application/json" class="sr-only" data-change="backup-import"></label>
         </div>
         <hr class="divider">
         <button class="btn btn-danger btn-block" data-action="app-reset">Cancella tutto e ricomincia</button>
-      </div>
+      </div>`
+  };
+
+  $('#view-profilo').innerHTML = `
+  <div class="pf-layout ${Profile.page ? 'has-page' : ''}">
+    <div class="pf-hub">
+      ${pfSummaryHtml(p, T, last)}
+      ${pfMenuHtml(p, last, page)}
+      <p class="disclaimer">${esc(DISCLAIMER)}</p>
     </div>
-  </div>
-  <p class="disclaimer">${esc(DISCLAIMER)}</p>
-  <div class="legal-links"><a href="privacy.html" target="_blank" rel="noopener">Privacy e termini d'uso</a></div>`;
+    ${page ? `<div class="pf-page">
+      <div class="pf-page-head">
+        <button class="icon-btn pf-back" data-action="pf-back" aria-label="Torna al profilo">${icon('left')}</button>
+        <h2>${esc(PF_PAGES[page])}</h2>
+      </div>
+      ${pages[page]()}
+    </div>` : ''}
+  </div>`;
 
   const pf = $('[data-pf]');
-  pf.querySelector('[data-pf-sex]').addEventListener('click', e => {
+  if (pf) pf.querySelector('[data-pf-sex]').addEventListener('click', e => {
     const b = e.target.closest('[data-v]'); if (!b) return;
     pf.querySelectorAll('[data-pf-sex] [data-v]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
     INPUTS['pf-live']();
@@ -236,7 +322,8 @@ ACTIONS['w-del'] = el => withUndo('Pesata eliminata', () => {
 ACTIONS['guidelines'] = () => openSheet({
   title: `Linee guida ${APP_NAME}`,
   body: GUIDELINES.map(g => `<div class="guide"><span class="ic-wrap">${icon(g.icon)}</span><div><b>${esc(g.t)}</b><p>${esc(g.d)}</p></div></div>`).join('') +
-    `<p class="disclaimer" style="margin-top:16px">${esc(DISCLAIMER)}</p>`
+    `<button class="btn btn-secondary btn-block" style="margin-top:16px" data-action="tour-replay">${icon('sparkles', 'ic-sm')} Rivedi la guida dell'app</button>
+    <p class="disclaimer" style="margin-top:16px">${esc(DISCLAIMER)}</p>`
 });
 ACTIONS['set-accent'] = el => { state.settings.accent = el.dataset.v; applyTheme(); saveState(); renderProfile(); };
 ACTIONS['set-theme'] = el => { state.settings.theme = el.dataset.v; applyTheme(); saveState(); renderProfile(); };
@@ -247,17 +334,15 @@ ACTIONS['set-round'] = el => {
   toast('Arrotondamento aggiornato. Salva di nuovo il piano per ricalcolare i grammi.', { icon: 'info' });
 };
 
-ACTIONS['backup-export'] = () => {
+/* Sul telefono si apre Condividi: il backup va dritto su iCloud Drive, Google Drive… */
+ACTIONS['backup-export'] = async () => {
+  const prev = state.settings.lastBackup;
   state.settings.lastBackup = new Date().toISOString();
+  const res = await shareFile(`${APP_NAME.toLowerCase()}-backup-${todayISO()}.json`, JSON.stringify(state, null, 2), 'application/json');
+  if (res === 'cancelled') { state.settings.lastBackup = prev; return; }
   saveState();
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `${APP_NAME.toLowerCase()}-backup-${todayISO()}.json`;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   renderProfile();
-  toast('Backup scaricato', { icon: 'download' });
+  toast(res === 'shared' ? 'Backup salvato' : 'Backup scaricato', { icon: 'download' });
 };
 CHANGES['backup-import'] = el => {
   const file = el.files[0];

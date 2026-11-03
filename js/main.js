@@ -26,10 +26,15 @@ function switchTab(id) {
   renderTabbar();
   $('#fab').classList.toggle('hidden', id !== 'oggi');
   TABS.find(t => t.id === id).render();
-  if (location.hash !== '#' + id) history.replaceState(null, '', '#' + id);
+  /* #profilo/peso resta com'è: la sottopagina del Profilo vive nella cronologia. */
+  if (location.hash.split('/')[0] !== '#' + id) history.replaceState(null, '', '#' + id + (id === 'profilo' && Profile.page ? '/' + Profile.page : ''));
   window.scrollTo(0, 0);
 }
-ACTIONS['go'] = el => switchTab(el.dataset.tab);
+/* Dalla barra o dall'avatar il Profilo si apre sempre dal menu. */
+ACTIONS['go'] = el => {
+  if (el.dataset.tab === 'profilo') { Profile.page = null; if (location.hash !== '#profilo') history.replaceState(null, '', '#profilo'); }
+  switchTab(el.dataset.tab);
+};
 
 function refreshHeader() {
   const p = state.profile;
@@ -67,7 +72,8 @@ function bootApp() {
   applyTheme();
   Today.date = todayISO();
   refreshHeader();
-  const fromHash = location.hash.replace('#', '');
+  const [fromHash, sub] = location.hash.replace('#', '').split('/');
+  if (fromHash === 'profilo' && PF_PAGES[sub]) Profile.page = sub;
   switchTab(TABS.some(t => t.id === fromHash) ? fromHash : 'oggi');
 }
 

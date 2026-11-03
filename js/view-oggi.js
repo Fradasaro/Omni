@@ -175,7 +175,9 @@ function renderToday() {
         ${macro('g', 'Grassi', 'fat', tot.g, T.g)}
       </div>
       ${completeBox}
-      <div class="xs faint" style="margin-top:12px">Media ultimi 7 giorni: ${n7 ? `${fmt0(s7 / n7)} kcal · ${n7} ${n7 === 1 ? 'giorno registrato' : 'giorni registrati'}` : 'nessun giorno registrato'}</div>
+      <button type="button" class="week-link" data-action="week-open">
+        <span>${icon('chart', 'ic-sm')} Media 7 giorni: ${n7 ? `${fmt0(s7 / n7)} kcal · ${n7} ${n7 === 1 ? 'giorno registrato' : 'giorni registrati'}` : 'nessun giorno registrato'}</span>
+        <b>La settimana ${icon('right', 'ic-sm')}</b></button>
     </div>
 
     <div class="card water" style="margin-top:16px">
@@ -193,6 +195,7 @@ function renderToday() {
     <div style="margin-top:16px">${day.meals.map((m, i) => mealHtml(m, i)).join('')}</div>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" data-action="add-meal">${icon('plus', 'ic-sm')} Aggiungi un pasto</button>
   </div>`;
+  tourAfterRender();
 }
 
 function mealHtml(meal, mIdx) {
@@ -224,7 +227,7 @@ function mealHtml(meal, mIdx) {
 }
 
 function itemHtml(it, mIdx, iIdx) {
-  const rm = `<button class="icon-btn sm" data-action="item-remove" data-m="${mIdx}" data-i="${iIdx}" aria-label="Rimuovi">${icon('x', 'ic-sm')}</button>`;
+  const rm = `<button class="icon-btn" data-action="item-remove" data-m="${mIdx}" data-i="${iIdx}" aria-label="Rimuovi">${icon('x', 'ic-sm')}</button>`;
   if (it.type === 'free' || it.type === 'quick') {
     const pre = it.type === 'free' ? FREE_MEAL_PRESETS.find(p => p.id === it.presetId) : null;
     return `<div class="item free">
@@ -239,15 +242,22 @@ function itemHtml(it, mIdx, iIdx) {
   const key = `${mIdx}:${iIdx}`;
   const hint = cookedHint(f, it.grams);
   const swapOpen = Today.openSwap === key;
+  const step = state.settings.round5 ? 5 : 1;
+  const at = `data-m="${mIdx}" data-i="${iIdx}"`;
+  const main = `<div class="item-name">${esc(f.name)} ${inPantry(f.id) ? '<span class="badge home">In casa</span>' : ''}</div>
+        <div class="item-meta">${fmt0(m.kcal)} kcal${hint ? ` · ${hint}` : ''}${f.missing ? '' : ` · <span class="item-swap-hint">${icon('swap', 'ic-xs')} scambia</span>`}</div>`;
+  /* Tocco sul nome = scambi (l'azione più usata); rimuovi sta nel menu ⋯,
+     lontano dai grammi, così non si tocca per sbaglio. */
   return `<div class="item">
       ${dot(f.cat)}
-      <div class="item-main">
-        <div class="item-name">${esc(f.name)} ${inPantry(f.id) ? '<span class="badge home">In casa</span>' : ''}</div>
-        <div class="item-meta">${fmt0(m.kcal)} kcal${hint ? ` · ${hint}` : ''}</div>
+      ${f.missing ? `<div class="item-main">${main}</div>`
+        : `<button type="button" class="item-main item-tap" data-action="item-swap" ${at} aria-expanded="${swapOpen}" aria-label="Scambia ${esc(f.name)}">${main}</button>`}
+      <div class="stepper">
+        <button type="button" class="step-btn" data-action="item-step" ${at} data-d="-${step}" aria-label="Togli ${step} g di ${esc(f.name)}">−</button>
+        <div class="item-grams-wrap"><input class="input item-grams" type="number" inputmode="decimal" min="1" max="3000" step="${step}" value="${it.grams}" data-change="item-grams" ${at} aria-label="Grammi di ${esc(f.name)}"></div>
+        <button type="button" class="step-btn" data-action="item-step" ${at} data-d="${step}" aria-label="Aggiungi ${step} g di ${esc(f.name)}">+</button>
       </div>
-      <div class="item-grams-wrap"><input class="input item-grams" type="number" inputmode="decimal" min="1" max="3000" step="${state.settings.round5 ? 5 : 1}" value="${it.grams}" data-change="item-grams" data-m="${mIdx}" data-i="${iIdx}" aria-label="Grammi di ${esc(f.name)}"></div>
-      ${f.missing ? '' : `<button class="icon-btn sm" data-action="item-swap" data-m="${mIdx}" data-i="${iIdx}" aria-label="Scambia ${esc(f.name)}" aria-expanded="${swapOpen}">${icon('swap', 'ic-sm')}</button>`}
-      ${rm}
+      <button class="icon-btn" data-action="item-menu" ${at} aria-label="Altre azioni per ${esc(f.name)}">${icon('more')}</button>
     </div>
     ${swapOpen ? swapDrawerHtml(it, f, mIdx, iIdx) : ''}`;
 }
@@ -301,6 +311,33 @@ ACTIONS['item-remove'] = el => {
   const name = it.type === 'food' ? getFood(it.foodId).name : it.label;
   Today.openSwap = null;
   withUndo(`${name} rimosso`, () => curDay().meals[m].items.splice(i, 1), renderToday);
+};
+/* ± a passi di 5 g (o 1 g), agganciati alla griglia: 103 g + 5 → 105 g. */
+ACTIONS['item-step'] = el => {
+  const it = curDay().meals[Number(el.dataset.m)].items[Number(el.dataset.i)];
+  const d = Number(el.dataset.d), step = Math.abs(d);
+  const next = d > 0 ? Math.floor(it.grams / step) * step + step : Math.ceil(it.grams / step) * step - step;
+  it.grams = clamp(next, step, 3000);
+  commitToday();
+};
+ACTIONS['item-menu'] = el => {
+  const m = Number(el.dataset.m), i = Number(el.dataset.i);
+  const f = getFood(curDay().meals[m].items[i].foodId);
+  openSheet({
+    title: f.name,
+    body: `<div class="action-list">
+      ${f.missing ? '' : `<button class="action brand" data-it-act="swap"><span class="ic-wrap">${icon('swap')}</span><span><b>Scambia con un equivalente</b><small>Stessi macro, prima quello che hai in casa</small></span></button>`}
+      <button class="action danger" data-it-act="remove"><span class="ic-wrap">${icon('trash')}</span><span><b>Rimuovi dal pasto</b><small>Puoi annullare subito dopo</small></span></button>
+    </div>`,
+    onMount: (root, close) => root.addEventListener('click', e => {
+      const b = e.target.closest('[data-it-act]');
+      if (!b) return;
+      close();
+      const ds = { dataset: { m, i } };
+      if (b.dataset.itAct === 'swap') { Today.openSwap = null; ACTIONS['item-swap'](ds); }
+      else ACTIONS['item-remove'](ds);
+    })
+  });
 };
 ACTIONS['item-swap'] = el => {
   const key = `${el.dataset.m}:${el.dataset.i}`;
@@ -427,15 +464,18 @@ function copyPrevDay() {
 ACTIONS['open-add-menu'] = () => {
   openSheet({
     title: 'Aggiungi',
-    body: `<div class="action-list">
-      <button class="action brand" data-add="food"><span class="ic-wrap">${icon('search')}</span><span><b>Cerca un alimento</b><small>Dal catalogo, con porzioni e grammi</small></span></button>
-      <button class="action" data-add="scan"><span class="ic-wrap">${icon('barcode')}</span><span><b>Scansiona un prodotto</b><small>Dal codice a barre della confezione</small></span></button>
-      <button class="action" data-add="recipe"><span class="ic-wrap">${icon('chef')}</span><span><b>Una ricetta</b><small>Le tue ricette, divise in porzioni</small></span></button>
-      <button class="action calm" data-add="free"><span class="ic-wrap">${icon('pizza')}</span><span><b>Pasto libero</b><small>Pizza, cena fuori, sushi… senza calcoli</small></span></button>
-      <button class="action" data-add="quick"><span class="ic-wrap">${icon('zap')}</span><span><b>Aggiunta rapida</b><small>Solo calorie e macro, ad esempio da un'etichetta</small></span></button>
-      <button class="action" data-add="water"><span class="ic-wrap">${icon('drop')}</span><span><b>Un bicchiere d'acqua</b><small>+250 ml</small></span></button>
-      <button class="action" data-add="plan"><span class="ic-wrap">${icon('list')}</span><span><b>Carica tutto il piano</b></span></button>
-    </div>`,
+    /* Le due azioni più frequenti in grande, il resto in una lista compatta. */
+    body: `<div class="add-main">
+        <button class="add-tile brand" data-add="food">${icon('search')}<b>Cerca</b><small>Un alimento</small></button>
+        <button class="add-tile" data-add="scan">${icon('barcode')}<b>Scansiona</b><small>Codice a barre</small></button>
+      </div>
+      <div class="add-more">
+        <button class="add-row" data-add="recipe">${icon('chef', 'ic-sm')}<span>Una ricetta</span></button>
+        <button class="add-row calm" data-add="free">${icon('pizza', 'ic-sm')}<span>Pasto libero</span></button>
+        <button class="add-row" data-add="quick">${icon('zap', 'ic-sm')}<span>Aggiunta rapida</span></button>
+        <button class="add-row" data-add="water">${icon('drop', 'ic-sm')}<span>Acqua +250 ml</span></button>
+        <button class="add-row wide" data-add="plan">${icon('list', 'ic-sm')}<span>Carica tutto il piano</span></button>
+      </div>`,
     onMount: (root, close) => root.addEventListener('click', e => {
       const b = e.target.closest('[data-add]');
       if (!b) return;
